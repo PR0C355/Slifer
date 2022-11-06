@@ -1,6 +1,9 @@
-/Bring Me The Horizon - Can You Feel My Heart.m4a
+*.m4a
+*.env
+*.cache
 /Kate Bush - Running Up That Hill A Deal With God - 2018 Remaster.m4a
 /Mother Mother - Hayloft.m4a
 /cover_art.jpg
 /ffmpeg
 /ffprobe
+.cache
