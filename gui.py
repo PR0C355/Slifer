@@ -467,9 +467,6 @@ def remove_download_page() -> None:
     download_spacer3.pack_forget()
     download_spacer4.pack_forget()
 
-    
-
-
 def settings_page() -> None:
     global root
 
@@ -527,12 +524,12 @@ def download_song(URL: str):
 
 def download_album(URL: str):
   spotify = spotipy.Spotify(auth_manager=SpotifyOAuth(
-    scope=scope,
-    client_id='19d6a0a29a1b47ee801ed0c10493b11d',
-    client_secret='34d4b0b1acef4324a22656c49a98dfe9',
-    redirect_uri='http://127.0.0.1:9090',
-    open_browser=True
-    ))
+  scope=scope,
+  client_id=os.getenv('SPOTIPY_CLIENT_ID'),
+  client_secret=os.getenv('SPOTIPY_CLIENT_SECRET'),
+  redirect_uri='http://127.0.0.1:9090',
+  open_browser=True
+  ))
     
   album_object = spotify.album(URL)
  
@@ -548,12 +545,12 @@ def download_album(URL: str):
 
 def download_artist(URL: str):
   spotify = spotipy.Spotify(auth_manager=SpotifyOAuth(
-    scope=scope,
-    client_id='19d6a0a29a1b47ee801ed0c10493b11d',
-    client_secret='34d4b0b1acef4324a22656c49a98dfe9',
-    redirect_uri='http://127.0.0.1:9090',
-    open_browser=True
-    ))
+  scope=scope,
+  client_id=os.getenv('SPOTIPY_CLIENT_ID'),
+  client_secret=os.getenv('SPOTIPY_CLIENT_SECRET'),
+  redirect_uri='http://127.0.0.1:9090',
+  open_browser=True
+  ))
   artistAlbums = spotify.artist_albums(URL, album_type='album')['items']
 
 
@@ -566,12 +563,12 @@ def download_artist(URL: str):
 
 def download_playlist(URL: str):
   spotify = spotipy.Spotify(auth_manager=SpotifyOAuth(
-    scope=scope,
-    client_id='19d6a0a29a1b47ee801ed0c10493b11d',
-    client_secret='34d4b0b1acef4324a22656c49a98dfe9',
-    redirect_uri='http://127.0.0.1:9090',
-    open_browser=True
-    ))
+  scope=scope,
+  client_id=os.getenv('SPOTIPY_CLIENT_ID'),
+  client_secret=os.getenv('SPOTIPY_CLIENT_SECRET'),
+  redirect_uri='http://127.0.0.1:9090',
+  open_browser=True
+  ))
 
   playlistTracks = spotify.playlist(URL)['tracks']
 
@@ -617,5 +614,18 @@ def download_process() -> None:
     download_status.set("Error: Invalid URL")
 
 
-main_page()
-root.mainloop()
+# main_page()
+# root.mainloop()
+
+from ShazamAPI import Shazam
+
+mp3_file_content_to_recognize = open('a.mp3', 'rb').read()
+
+shazam = Shazam(
+    mp3_file_content_to_recognize,
+    lang='en',
+    time_zone='Europe/Paris'
+)
+recognize_generator = shazam.recognizeSong()
+while True:
+	print(next(recognize_generator)) # current offset & shazam response to recognize requests
