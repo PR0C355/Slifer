@@ -13,6 +13,7 @@ from mutagen.mp4 import MP4, MP4Cover
 from pydub import AudioSegment, effects
 from spotipy.oauth2 import SpotifyOAuth
 from dotenv import load_dotenv
+from lyricsgenius import Genius
 
 import os
 
@@ -23,8 +24,10 @@ scope = "user-library-read"
 load_dotenv()
 spotify = spotipy.Spotify(auth_manager=SpotifyOAuth(
   scope=scope,
-  client_id=os.getenv('SPOTIPY_CLIENT_ID'),
-  client_secret=os.getenv('SPOTIPY_CLIENT_SECRET'),
+  # client_id=os.getenv('SPOTIPY_CLIENT_ID'),
+    client_id='19d6a0a29a1b47ee801ed0c10493b11d',
+  # client_secret=os.getenv('SPOTIPY_CLIENT_SECRET'),
+    client_secret='a8203a38ec7b4f9a8b910c29af68f944',
   redirect_uri='http://127.0.0.1:9090',
   open_browser=True
   ))
@@ -62,10 +65,23 @@ class Song:
   image_urls = []
   cover_art = ""
 
+  lyrics = ""
+
   fileDirectory = ""
 
+
   def __init__(self, URL):
-    spotify = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials('19d6a0a29a1b47ee801ed0c10493b11d', '34d4b0b1acef4324a22656c49a98dfe9'), requests_timeout=10, retries=10)
+    """Initialize a song object with a Spotify URL"""
+    spotify = spotipy.Spotify(auth_manager=SpotifyOAuth(
+      scope=scope,
+      # client_id='19d6a0a29a1b47ee801ed0c10493b11d',
+      client_id=os.getenv('SPOTIPY_CLIENT_ID'),
+      # client_secret='a8203a38ec7b4f9a8b910c29af68f944',
+      client_secret=os.getenv('SPOTIPY_CLIENT_SECRET'),
+      redirect_uri='http://127.0.0.1:9090',
+      open_browser=True
+    ))
+
 
     song = spotify.track(URL)
 
@@ -125,18 +141,35 @@ class Song:
 
     self.explicit = song['explicit']
 
-    self.cover_art = song['album']['images'][-1]['url']
+    
     self.image_urls = song['album']['images']
+
+    for url in self.image_urls:
+      if url['height'] == 640:
+        self.cover_art = url['url']
+        break
+      elif url['height'] == 300:
+        self.cover_art = url['url']
+        break
+      elif url['height'] == 64:
+        self.cover_art = url['url']
+        break
+
+    self.lyrics = self.getLyrics()
+    print(self.lyrics)
+
     print("Cover Art: " + self.cover_art)
     print("Metadata Retrieval Complete.")
     print("\n")
 
-  def download(self, directory):
+
+  def autoDownload(self, directory):
+    """Automatically download the song from YouTube"""
     if self.explicit:
       youtubeSearch = f"{self.title} {self.artist} uncensored"
       print (f"Youtube Search: {youtubeSearch}")
     else:
-      youtubeSearch = f"{self.title} {self.artist} music"
+      youtubeSearch = f"{self.title} {self.artist} audio"
       print (f"Youtube Search: {youtubeSearch}")
 
     ytSearch = urllib.parse.quote(str(youtubeSearch))
@@ -179,8 +212,8 @@ class Song:
     print("Download Complete.")
     print("\n")
 
-
   def saveMetaData(self):
+    """Save the metadata to the song file"""
 
     songObject = MP4(self.fileDirectory)
     songObject['©nam'] = self.title
@@ -191,6 +224,7 @@ class Song:
     songObject['©alb'] = self.album_title
     songObject['trkn'] = [(int(self.track_number), int(self.album_total_tracks))]
     songObject['disk'] = [(int(self.disc_number), int(self.disc_number))]
+    songObject['©lyr'] = self.lyrics
 
     urllib.request.urlretrieve(self.cover_art , "cover_art.jpg")
 
@@ -206,6 +240,8 @@ class Song:
     print("\n")
 
   def audioProcessing(self):
+    """Process the audio file"""
+
     """
     print("Normalizing Audio...")
     songObject = AudioSegment.from_file(f"{fileName}.m4a", "m4a")
@@ -216,6 +252,15 @@ class Song:
     print("Audio Normalization Complete.")
     """
 
+  def getLyrics(self) -> str:
+    """Get the lyrics from Genius"""
+    genius = Genius('0TLMfeIdmKDR84fOWWBmxH5LGDLrFii_Hqzf9masPnV4fd5MEyKL8qQnBj9BXxDU')
+    try:
+      lyrics = genius.search_song(self.title, self.artist)
+      lyrics = lyrics.lyrics
+      return lyrics
+    except:
+      return "None"
 
 APP_TITLE: str = "Slifer"
 BLACK: str = "#191414"
@@ -233,11 +278,11 @@ SUBTITLE_FONT = font.Font(family='Broadway', size=25)
 STATUS_FONT = font.Font(family='Broadway', size=70)
 LARGE_BUTTON_FONT = font.Font(family='Broadway', size=50)
 
-DOWNLOAD_IMAGE = PhotoImage(file = "Download-Button.png")
-SETTINGS_IMAGE = PhotoImage(file = "Settings-Button.png")
-RETURN_IMAGE = PhotoImage(file = "Return-Button.png")
-CHOOSE_DIRECTORY_IMAGE = PhotoImage(file = "ChooseDirectory-Button.png")
-DOWNLOAD_SQUARED_IMAGE = PhotoImage(file = "DownloadSquared-Button.png")
+DOWNLOAD_IMAGE = PhotoImage(file = "buttons/Download-Button.png")
+SETTINGS_IMAGE = PhotoImage(file = "buttons/Settings-Button.png")
+RETURN_IMAGE = PhotoImage(file = "buttons/Return-Button.png")
+CHOOSE_DIRECTORY_IMAGE = PhotoImage(file = "buttons/ChooseDirectory-Button.png")
+DOWNLOAD_SQUARED_IMAGE = PhotoImage(file = "buttons/DownloadSquared-Button.png")
 
 def main_page() -> None:
     global root
@@ -512,23 +557,23 @@ def settings_to_main() -> None:
   main_page()
 
 def download_song(URL: str):
+  
   download_status.set("Status: Retrieving Song Data...")
   newSong: Song = Song(URL)
 
   download_status.set("Status: Downloading Song...")
-  newSong.download(selected_file_directory.get())
-
+  newSong.autoDownload(selected_file_directory.get())
 
   download_status.set("Status: Updating Downloaded File with Saved Data...")
   newSong.saveMetaData()
 
 def download_album(URL: str):
   spotify = spotipy.Spotify(auth_manager=SpotifyOAuth(
-  scope=scope,
-  client_id=os.getenv('SPOTIPY_CLIENT_ID'),
-  client_secret=os.getenv('SPOTIPY_CLIENT_SECRET'),
-  redirect_uri='http://127.0.0.1:9090',
-  open_browser=True
+    scope=scope,
+    client_id='19d6a0a29a1b47ee801ed0c10493b11d',
+    client_secret='a8203a38ec7b4f9a8b910c29af68f944',
+    redirect_uri='http://127.0.0.1:9090',
+    open_browser=True
   ))
     
   album_object = spotify.album(URL)
@@ -545,11 +590,11 @@ def download_album(URL: str):
 
 def download_artist(URL: str):
   spotify = spotipy.Spotify(auth_manager=SpotifyOAuth(
-  scope=scope,
-  client_id=os.getenv('SPOTIPY_CLIENT_ID'),
-  client_secret=os.getenv('SPOTIPY_CLIENT_SECRET'),
-  redirect_uri='http://127.0.0.1:9090',
-  open_browser=True
+    scope=scope,
+    client_id='19d6a0a29a1b47ee801ed0c10493b11d',
+    client_secret='a8203a38ec7b4f9a8b910c29af68f944',
+    redirect_uri='http://127.0.0.1:9090',
+    open_browser=True
   ))
   artistAlbums = spotify.artist_albums(URL, album_type='album')['items']
 
@@ -563,11 +608,11 @@ def download_artist(URL: str):
 
 def download_playlist(URL: str):
   spotify = spotipy.Spotify(auth_manager=SpotifyOAuth(
-  scope=scope,
-  client_id=os.getenv('SPOTIPY_CLIENT_ID'),
-  client_secret=os.getenv('SPOTIPY_CLIENT_SECRET'),
-  redirect_uri='http://127.0.0.1:9090',
-  open_browser=True
+    scope=scope,
+    client_id='19d6a0a29a1b47ee801ed0c10493b11d',
+    client_secret='a8203a38ec7b4f9a8b910c29af68f944',
+    redirect_uri='http://127.0.0.1:9090',
+    open_browser=True
   ))
 
   playlistTracks = spotify.playlist(URL)['tracks']
@@ -614,18 +659,5 @@ def download_process() -> None:
     download_status.set("Error: Invalid URL")
 
 
-# main_page()
-# root.mainloop()
-
-from ShazamAPI import Shazam
-
-mp3_file_content_to_recognize = open('a.mp3', 'rb').read()
-
-shazam = Shazam(
-    mp3_file_content_to_recognize,
-    lang='en',
-    time_zone='Europe/Paris'
-)
-recognize_generator = shazam.recognizeSong()
-while True:
-	print(next(recognize_generator)) # current offset & shazam response to recognize requests
+main_page()
+root.mainloop()
