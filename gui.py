@@ -67,100 +67,124 @@ class Song:
 
   lyrics = ""
 
-  fileDirectory = ""
+  fileDirectory: str
 
 
-  def __init__(self, URL):
-    """Initialize a song object with a Spotify URL"""
-    spotify = spotipy.Spotify(auth_manager=SpotifyOAuth(
-      scope=scope,
-      # client_id='19d6a0a29a1b47ee801ed0c10493b11d',
-      client_id=os.getenv('SPOTIPY_CLIENT_ID'),
-      # client_secret='a8203a38ec7b4f9a8b910c29af68f944',
-      client_secret=os.getenv('SPOTIPY_CLIENT_SECRET'),
-      redirect_uri='http://127.0.0.1:9090',
-      open_browser=True
-    ))
+  def __init__(self, URL: str = "", directory: str = ""):
+    """Initialize a song object with either a Spotify URL, or a file directory."""
+
+    self.fileDirectory = directory
+
+    if URL != "":
+      spotify = spotipy.Spotify(auth_manager=SpotifyOAuth(
+        scope=scope,
+        # client_id='19d6a0a29a1b47ee801ed0c10493b11d',
+        client_id=os.getenv('SPOTIPY_CLIENT_ID'),
+        # client_secret='a8203a38ec7b4f9a8b910c29af68f944',
+        client_secret=os.getenv('SPOTIPY_CLIENT_SECRET'),
+        redirect_uri='http://127.0.0.1:9090',
+        open_browser=True
+      ))
 
 
-    song = spotify.track(URL)
+      song = spotify.track(URL)
 
-    self.spotify_url = URL
+      self.spotify_url = URL
 
-    for artist in song['artists']:
-      if len(song['artists']) > 1:
-        if artist == song['artists'][-1]:
+      for artist in song['artists']:
+        if len(song['artists']) > 1:
+          if artist == song['artists'][-1]:
+            self.artist += artist['name']
+          else:
+            self.artist += artist['name'] + ", "
+          self.artists.append(artist['name'])
+        else:
           self.artist += artist['name']
+          self.artists.append(artist['name'])
+
+      self.title = song['name']
+      print( ("Track Name: " + self.title).encode(errors='ignore').decode() )
+
+      albumName = song['album']['name']
+      self.album_title = albumName
+      print(("Album: " + self.album_title).encode(errors='ignore').decode())
+
+      self.track_number = str(song['track_number'])
+      print("Track Number: " + self.track_number)
+
+      self.disc_number = str(song['disc_number'])
+      print("Disc Number: " + self.disc_number)
+
+      self.album_total_tracks = str(song['album']['total_tracks'])
+      print("Total Tracks: " + self.album_total_tracks)
+
+      album_artists = ""
+      for artist in song['album']['artists']:
+        if len(song['album']['artists']) > 1:
+          if artist == song['album']['artists'][-1]:
+            self.album_artist += artist['name']
+          else:
+            self.album_artist += artist['name'] + ", "
         else:
-          self.artist += artist['name'] + ", "
-        self.artists.append(artist['name'])
-      else:
-        self.artist += artist['name']
-        self.artists.append(artist['name'])
-
-    self.title = song['name']
-    print( ("Track Name: " + self.title).encode(errors='ignore').decode() )
-
-    albumName = song['album']['name']
-    self.album_title = albumName
-    print(("Album: " + self.album_title).encode(errors='ignore').decode())
-
-    self.track_number = str(song['track_number'])
-    print("Track Number: " + self.track_number)
-
-    self.disc_number = str(song['disc_number'])
-    print("Disc Number: " + self.disc_number)
-
-    self.album_total_tracks = str(song['album']['total_tracks'])
-    print("Total Tracks: " + self.album_total_tracks)
-
-    album_artists = ""
-    for artist in song['album']['artists']:
-      if len(song['album']['artists']) > 1:
-        if artist == song['album']['artists'][-1]:
-          self.album_artist += artist['name']
-        else:
-          self.album_artist += artist['name'] + ", "
-      else:
-          self.album_artist += artist['name']
-   
-    print(("Album Artists: " + str(self.album_artist)).encode(errors='ignore').decode())
-
-    self.release_date = str(song['album']['release_date'])
-    self.release_year = self.release_date[:4]
-    print("Release Date: " + self.release_date)
-
-    for genre in spotify.artist(song['artists'][0]['external_urls']['spotify'])['genres']:
-      self.genres.append(genre.title())
-      
-    if len(self.genres) >= 1:
-      self.genre = self.genres[0]
-    else:
-      self.genre = "None"
-    print("Song Genres: " + str(self.genre))
-
-    self.explicit = song['explicit']
-
+            self.album_artist += artist['name']
     
-    self.image_urls = song['album']['images']
+      print(("Album Artists: " + str(self.album_artist)).encode(errors='ignore').decode())
 
-    for url in self.image_urls:
-      if url['height'] == 640:
-        self.cover_art = url['url']
-        break
-      elif url['height'] == 300:
-        self.cover_art = url['url']
-        break
-      elif url['height'] == 64:
-        self.cover_art = url['url']
-        break
+      self.release_date = str(song['album']['release_date'])
+      self.release_year = self.release_date[:4]
+      print("Release Date: " + self.release_date)
 
-    self.lyrics = self.getLyrics()
-    print(self.lyrics)
+      for genre in spotify.artist(song['artists'][0]['external_urls']['spotify'])['genres']:
+        self.genres.append(genre.title())
+        
+      if len(self.genres) >= 1:
+        self.genre = self.genres[0]
+      else:
+        self.genre = "None"
+      print("Song Genres: " + str(self.genre))
 
-    print("Cover Art: " + self.cover_art)
-    print("Metadata Retrieval Complete.")
-    print("\n")
+      self.explicit = song['explicit']
+
+      
+      self.image_urls = song['album']['images']
+
+      for url in self.image_urls:
+        if url['height'] == 640:
+          self.cover_art = url['url']
+          break
+        elif url['height'] == 300:
+          self.cover_art = url['url']
+          break
+        elif url['height'] == 64:
+          self.cover_art = url['url']
+          break
+
+      self.lyrics = self.getLyrics()
+      print(self.lyrics)
+
+      print("Cover Art: " + self.cover_art)
+      print("Metadata Retrieval Complete.")
+      print("\n")
+    
+    elif directory != "":
+      songObject = MP4(self.fileDirectory)
+
+      self.title = songObject['©nam']
+      self.release_year = songObject['\xa9day'] 
+      self.album_artist = songObject['aART']
+      self.genre = songObject['©gen']
+      self.artist = songObject['©ART']
+      self.album_title = songObject['©alb']
+      
+      self.track_number = songObject['trkn'][0][0]
+      self.album_total_tracks = songObject['trkn'][0][1]
+      self.disc_number = songObject['disk'][0][0]
+      self.lyrics = songObject['©lyr'] 
+
+      self.cover_art = songObject['covr']
+
+    else:
+      pass
 
 
   def autoDownload(self, directory):
@@ -262,6 +286,57 @@ class Song:
     except:
       return "None"
 
+  def trackReplacement(self, youtubeURL: str):
+    # Download the new m4a
+    self.youtube_url = youtubeURL
+    print("Video URL: " + youtubeURL)
+
+    fileName = self.fileDirectory[self.fileDirectory.rfind("/")+1:]
+    directory = self.fileDirectory[:self.fileDirectory.rfind("/")+1]
+    print("Directory: " + directory)
+    newSongFileName = f"(new) {fileName}"
+
+    ydl = yt_dlp.YoutubeDL({
+        'format': 'bestaudio[ext=m4a]',
+        'outtmpl': f"{directory}{newSongFileName}",
+        'forceid': 'ytlink',
+        'merge_output_format': 'm4a',
+    })
+
+    with ydl:
+      ydl.download([youtubeURL])
+
+    downloaded_fileName = fileName.encode('utf-8').decode()
+    print("Downloaded: " + newSongFileName)
+
+    print("Download Complete.")
+    # Replace new m4a with metadata
+    newSong = MP4(f"{directory}{newSongFileName}")
+    print(f"Directory? {self.fileDirectory}")
+    oldSong = MP4(self.fileDirectory)
+    
+
+    newSong['©nam'] = oldSong['©nam']
+    newSong['\xa9day'] = oldSong['\xa9day']
+    newSong['aART'] = oldSong['aART']
+    newSong['©gen'] = oldSong['©gen']
+    newSong['©ART'] = oldSong['©ART']
+    newSong['©alb'] = oldSong['©alb']
+    newSong['trkn'] = oldSong['trkn']
+    newSong['disk'] = oldSong['disk']
+    newSong['©lyr'] = oldSong['©lyr']
+    newSong['covr'] = oldSong['covr']
+
+    newSong.save()
+    oldSong.save
+
+    # Delete old m4a
+    os.remove(self.fileDirectory)
+
+    # Rename new
+    os.rename(f"{directory}{newSongFileName}", self.fileDirectory)
+
+
 APP_TITLE: str = "Slifer"
 BLACK: str = "#191414"
 GREEN: str = "#1DB954"
@@ -315,6 +390,16 @@ def main_page() -> None:
         image=DOWNLOAD_IMAGE
     )
 
+    global track_replacement_page_button
+    track_replacement_page_button = tk.Button(
+        root,
+        text = "Track Replacement",
+        font = SUBTITLE_FONT,
+        bg = "#63666A",
+        fg = "black",
+        command = main_to_track_replacement,
+    )
+
     global settings_button
     settings_button = tk.Button(
         root,
@@ -343,6 +428,7 @@ def main_page() -> None:
     sub_title.pack()
     spacer1.pack()
     download_button.pack()
+    track_replacement_page_button.pack()
     spacer3.pack()
     settings_button.pack()
     spacer2.pack()
@@ -353,6 +439,7 @@ def remove_main_page() -> None:
     sub_title.pack_forget()
     spacer1.pack_forget()
     download_button.pack_forget()
+    track_replacement_page_button.pack_forget()
     settings_button.pack_forget()
     spacer2.pack_forget()
     spacer3.pack_forget()
@@ -512,6 +599,154 @@ def remove_download_page() -> None:
     download_spacer3.pack_forget()
     download_spacer4.pack_forget()
 
+def track_replacement_page() -> None:
+  global root
+
+  global selected_replacement_track
+  selected_replacement_track = tk.StringVar(root)
+  selected_replacement_track.set("~")
+
+  global selected_replacement_url
+  selected_replacement_url = tk.StringVar(root)
+  selected_replacement_url.set("")
+
+  global track_replacement_status
+  track_replacement_status = tk.StringVar(root)
+  track_replacement_status.set("Status: Idle")
+
+
+  global track_replacement_main_title
+  track_replacement_main_title = tk.Label(
+      root,
+      text = "Track Replacement",
+      foreground=BLACK,
+      background=GREEN,
+      font=MAIN_MENU_FONT
+  )
+  track_replacement_main_title.pack()
+
+  global track_replacement_spacer
+  track_replacement_spacer = tk.Label(root, "", height=2, bg=GREEN)
+  track_replacement_spacer.pack()
+
+  global track_replacement_url_entry
+  global track_replacement_url_label
+
+  track_replacement_url_label = tk.Label(
+      root,
+      text="Enter Replacement URL:",
+      # width=50,
+      font=SUBTITLE_FONT,
+      background=GREEN,
+      fg=BLACK
+  )
+  track_replacement_url_label.pack()
+
+  track_replacement_url_entry = tk.Entry(
+      root,
+      textvariable=selected_replacement_url,
+      width=44,
+      font=SUBTITLE_FONT,
+      bg=BLACK,
+      fg=GREEN,
+  )
+  track_replacement_url_entry.pack()
+
+  global track_replacement_spacer2
+  track_replacement_spacer2 = tk.Label(root, "", height=2, bg=GREEN)
+  track_replacement_spacer2.pack()
+
+  global track_replacement_directory_label
+  track_replacement_directory_label = tk.Label(
+      root,
+      text="Selected Track:",
+      width=51,
+      font=SUBTITLE_FONT,
+      background=GREEN,
+      fg=BLACK
+  )
+  track_replacement_directory_label.pack()
+
+  global track_replacement_directory_button
+  track_replacement_directory_button = tk.Button(
+      root,
+      text = "Choose Track",
+      font = SUBTITLE_FONT,
+      bg = BLACK,
+      image=CHOOSE_DIRECTORY_IMAGE,
+      command = lambda: selected_replacement_track.set(f"{fd.askopenfilename()}")
+  )
+  track_replacement_directory_button.pack() 
+
+  global track_replacement_directory_entry
+  track_replacement_directory_entry = tk.Entry(
+      root,
+      textvariable = selected_replacement_track,
+      width=44,
+      font = SUBTITLE_FONT,
+      bg=BLACK,
+      fg=GREEN
+  )
+  track_replacement_directory_entry.pack()
+
+  global track_replacement_spacer3
+  track_replacement_spacer3 = tk.Label(root, "", height=2, bg=GREEN)
+  track_replacement_spacer3.pack()
+
+  global track_replacement_button
+  track_replacement_button = tk.Button(
+      root,
+      text = "Replace Track",
+      font = SUBTITLE_FONT,
+      bg = BLACK,
+      # height = 10,
+      # command= lambda: print(selected_download_option.get())
+      command = lambda: song_replacement()
+  )
+  track_replacement_button.pack() 
+
+  global track_replacement_spacer4
+  track_replacement_spacer4 = tk.Label(root, "", height=2, bg=GREEN)
+  track_replacement_spacer4.pack()
+
+  global track_replacement_status_label
+  track_replacement_status_label = tk.Label(
+      root,
+      textvariable = track_replacement_status,
+      foreground=BLACK,
+      background=GREEN,
+      font=STATUS_FONT
+  )
+  track_replacement_status_label.pack()
+
+  global return_to_main_button
+  return_to_main_button = tk.Button(
+      root, 
+      text = "Return",
+      font = SUBTITLE_FONT,
+      background = BLACK,
+      # width = 19,
+      image=RETURN_IMAGE,
+      # height=60,
+      command = lambda: track_replacement_to_main()
+  )
+  return_to_main_button.pack()
+
+def remove_track_replacement_page() -> None:
+  track_replacement_main_title.pack_forget()
+  track_replacement_spacer.pack_forget()
+  track_replacement_url_entry.pack_forget()
+  track_replacement_url_label.pack_forget()
+  track_replacement_spacer2.pack_forget()
+  track_replacement_directory_label.pack_forget()
+  track_replacement_directory_button.pack_forget()
+  track_replacement_directory_entry.pack_forget()
+  track_replacement_spacer3.pack_forget()
+  track_replacement_button.pack_forget()
+  track_replacement_spacer4.pack_forget()
+  track_replacement_status_label.pack_forget()
+  return_to_main_button.pack_forget()
+
 def settings_page() -> None:
     global root
 
@@ -556,15 +791,23 @@ def settings_to_main() -> None:
   remove_settings_page()
   main_page()
 
+def main_to_track_replacement() -> None:
+  remove_main_page()
+  track_replacement_page()
+
+def track_replacement_to_main() -> None:
+  remove_track_replacement_page()
+  main_page()
+
 def download_song(URL: str):
   
-  download_status.set("Status: Retrieving Song Data...")
-  newSong: Song = Song(URL)
+  download_status.set("Retrieving Song Data...")
+  newSong: Song = Song(URL=URL)
 
-  download_status.set("Status: Downloading Song...")
+  download_status.set("Downloading Song...")
   newSong.autoDownload(selected_file_directory.get())
 
-  download_status.set("Status: Updating Downloaded File with Saved Data...")
+  download_status.set("Updating Downloaded File with Saved Data...")
   newSong.saveMetaData()
 
 def download_album(URL: str):
@@ -581,11 +824,13 @@ def download_album(URL: str):
 
   album_urls = album_object['tracks']['items']
 
-  download_status.set("Downloading...")
+  download_status.set("Downloading Album...")
+  index: int = 1
   for url in album_urls:
+    download_status.set(f"Downloading Song #{index}...")
     download_song(url['external_urls']['spotify'])
-    download_status.set("Downloading Album...")
     root.update()
+    index += 1
   download_status.set("Download Complete!")
 
 def download_artist(URL: str):
@@ -599,11 +844,15 @@ def download_artist(URL: str):
   artistAlbums = spotify.artist_albums(URL, album_type='album')['items']
 
 
-  download_status.set("Downloading...")
+  download_status.set("Downloading Artist\'s Songs...")
+
+  index: int = 1
   for album in artistAlbums:
+    download_status.set(f"Downloading Album #{index}...")
     download_album(album['external_urls']['spotify'])
-    download_status.set("Downloading Artist\'s Songs...")
     root.update()
+    index += 1
+
   download_status.set("Download Complete!")
 
 def download_playlist(URL: str):
@@ -622,7 +871,10 @@ def download_playlist(URL: str):
   while playlistTracks['next']:
     playlistTracks = spotify.next(playlistTracks)
     playlistSongs.extend(playlistTracks['items'])
-  download_status.set("Downloading...")
+  download_status.set("Retrieving Playlist Tracks...")
+
+  root.update()
+  index: int = 1
   for song in playlistSongs:
     spotify = spotipy.Spotify(auth_manager=SpotifyOAuth(
       scope=scope,
@@ -631,33 +883,53 @@ def download_playlist(URL: str):
       redirect_uri='http://127.0.0.1:9090',
       open_browser=True
     ))
-    download_song(song['track']['external_urls']['spotify'])
-    download_status.set("Downloading Playlist Songs...")
     root.update()
+    download_status.set(f"Downloading Playlist Song #{index}...")
+    download_song(song['track']['external_urls']['spotify'])
+    index += 1
   download_status.set("Download Complete!")
   
 def download_process() -> None:
 
   if ('track' in selected_url.get()):
     download_status.set("Downloading...")
+    root.update()
     download_song(selected_url.get())
-    download_status.set("Status: Download Complete!")
+    download_status.set("Download Complete!")
   
   elif ('album' in selected_url.get()):
     download_status.set("Downloading...")
+    root.update()
     download_album(selected_url.get())
+    download_status.set("Download Complete!")
       
   elif ('artist' in selected_url.get()):  
     download_status.set("Downloading...")
+    root.update()
     download_artist(selected_url.get())
+    download_status.set("Download Complete!")
     
   elif ('playlist' in selected_url.get()):
     download_status.set("Downloading...")
+    root.update()
     download_playlist(selected_url.get())
+    download_status.set("Download Complete!")
 
   else: 
     download_status.set("Error: Invalid URL")
 
+def replace_downloaded_song(URL: str, track_location: str):
+  downloadedSong: Song = Song(directory=track_location)
+  downloadedSong.trackReplacement(URL)
+
+def song_replacement():
+  track_replacement_status.set("Replacing Track...")
+  root.update()
+  replace_downloaded_song(track_replacement_url_entry.get(), track_replacement_directory_entry.get())
+  track_replacement_status.set("Track Replacement Complete!")
 
 main_page()
 root.mainloop()
+
+# geez = Song(directory="/Users/tumi/Desktop/Ini - Grandeur.m4a")
+# geez.trackReplacement("https://www.youtube.com/watch?v=YVkUvmDQ3HY")
