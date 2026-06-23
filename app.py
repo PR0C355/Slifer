@@ -1,23 +1,18 @@
-import tkinter as tk
-import tkinter.font as font
-import tkinter.filedialog as fd
-from tkinter import * 
-from tkinter.ttk import *
-import spotipy
-from spotipy.oauth2 import SpotifyClientCredentials
-import urllib.request
-import re
 import os
+import re
+import tkinter as tk
+import tkinter.filedialog as fd
+import tkinter.font as font
+import urllib.request
+from tkinter import *
+
+import spotipy
 import yt_dlp
-from mutagen.mp4 import MP4, MP4Cover
-from pydub import AudioSegment, effects
-from spotipy.oauth2 import SpotifyOAuth
 from dotenv import load_dotenv
 from lyricsgenius import Genius
-
-import os
-
-
+from mutagen.mp4 import MP4, MP4Cover
+from PIL.ImageTk import PhotoImage
+from spotipy.oauth2 import SpotifyClientCredentials, SpotifyOAuth
 
 scope = "user-library-read"
 
@@ -25,19 +20,36 @@ load_dotenv()
 spotify = spotipy.Spotify(auth_manager=SpotifyOAuth(
   scope=scope,
   # client_id=os.getenv('SPOTIPY_CLIENT_ID'),
-    client_id='19d6a0a29a1b47ee801ed0c10493b11d',
+    # client_id='19d6a0a29a1b47ee801ed0c10493b11d',
   # client_secret=os.getenv('SPOTIPY_CLIENT_SECRET'),
-    client_secret='a8203a38ec7b4f9a8b910c29af68f944',
+    # client_secret='a8203a38ec7b4f9a8b910c29af68f944',
   redirect_uri='http://127.0.0.1:9090',
   open_browser=True
   ))
 
 
-
-
 punc = '''!:()[]?{};'"<>.@#$%^*_~'''
 
+APP_TITLE: str = "Slifer"
+BLACK: str = "#191414"
+GREEN: str = "#1DB954"
+DOWNLOAD_OPTIONS = ["Song", "Album",  "Artist", "Playlist"]
 
+root = tk.Tk()
+root.title(APP_TITLE)
+root.geometry("1920x1080")
+root.configure(bg=GREEN)
+
+MAIN_MENU_FONT = font.Font(family='Broadway', size=100, underline=1)
+SUBTITLE_FONT = font.Font(family='Broadway', size=25)
+STATUS_FONT = font.Font(family='Broadway', size=35)
+LARGE_BUTTON_FONT = font.Font(family='Broadway', size=50)
+
+DOWNLOAD_IMAGE = PhotoImage(file = "buttons/Download-Button.png")
+SETTINGS_IMAGE = PhotoImage(file = "buttons/Settings-Button.png")
+RETURN_IMAGE = PhotoImage(file = "buttons/Return-Button.png")
+CHOOSE_DIRECTORY_IMAGE = PhotoImage(file = "buttons/ChooseDirectory-Button.png")
+DOWNLOAD_SQUARED_IMAGE = PhotoImage(file = "buttons/DownloadSquared-Button.png")
 
 class Song:
   title = ""
@@ -78,10 +90,10 @@ class Song:
     if URL != "":
       spotify = spotipy.Spotify(auth_manager=SpotifyOAuth(
         scope=scope,
-        # client_id='19d6a0a29a1b47ee801ed0c10493b11d',
         client_id=os.getenv('SPOTIPY_CLIENT_ID'),
-        # client_secret='a8203a38ec7b4f9a8b910c29af68f944',
+          # client_id='19d6a0a29a1b47ee801ed0c10493b11d',
         client_secret=os.getenv('SPOTIPY_CLIENT_SECRET'),
+          # client_secret='a8203a38ec7b4f9a8b910c29af68f944',
         redirect_uri='http://127.0.0.1:9090',
         open_browser=True
       ))
@@ -196,9 +208,15 @@ class Song:
       youtubeSearch = f"{self.title} {self.artist} audio"
       print (f"Youtube Search: {youtubeSearch}")
 
+    download_status.set("Selecting Song on YouTube...")
+    root.update()
+
     ytSearch = urllib.parse.quote(str(youtubeSearch))
 
     print ("URL Query: " + "https://www.youtube.com/results?search_query=" + ytSearch)
+
+    download_status.set("Retrieving Song URL on YouTube...")
+    root.update()
 
     try: 
       ytSearchURL = urllib.request.urlopen(("https://www.youtube.com/results?search_query=" + ytSearch))
@@ -210,6 +228,7 @@ class Song:
     youtubeURL: str = ("https://www.youtube.com/watch?v=" + video_ids[0])
     self.youtube_url = youtubeURL
     print("Video URL: " + youtubeURL)
+
 
     fileName = (f"{directory}{self.artist} - {self.title}").encode(errors='ignore').decode()
     fileName = fileName.replace("#", "")
@@ -227,17 +246,24 @@ class Song:
     })
 
     with ydl:
+      download_status.set("Downloading Song from YouTube...")
+      root.update()
       ydl.download([youtubeURL])
 
     downloaded_fileName = fileName.encode('utf-8').decode() + ".m4a"
     print("Downloaded: " + downloaded_fileName)
 
     self.fileDirectory = downloaded_fileName  
+    download_status.set("Song Download Complete.")
+    root.update()
     print("Download Complete.")
     print("\n")
 
   def saveMetaData(self):
     """Save the metadata to the song file"""
+
+    download_status.set("Retrieving Song Metadata...")
+    root.update()
 
     songObject = MP4(self.fileDirectory)
     songObject['©nam'] = self.title
@@ -250,6 +276,9 @@ class Song:
     songObject['disk'] = [(int(self.disc_number), int(self.disc_number))]
     songObject['©lyr'] = self.lyrics
 
+    download_status.set("Retrieving Song Cover Art...")
+    root.update()
+
     urllib.request.urlretrieve(self.cover_art , "cover_art.jpg")
 
     with open("cover_art.jpg", "rb") as cover:
@@ -261,6 +290,8 @@ class Song:
 
     os.remove("cover_art.jpg")
     print("Metadata Saved.")
+    download_status.set("Song Metadata Retrieval Complete.")
+    root.update()
     print("\n")
 
   def audioProcessing(self):
@@ -280,7 +311,11 @@ class Song:
     """Get the lyrics from Genius"""
     genius = Genius('0TLMfeIdmKDR84fOWWBmxH5LGDLrFii_Hqzf9masPnV4fd5MEyKL8qQnBj9BXxDU')
     try:
+      download_status.set("Searching for Song on Genius...")
+      root.update()
       lyrics = genius.search_song(self.title, self.artist)
+      download_status.set("Retrieving Song Lyrics from Genius...")
+      root.update()
       lyrics = lyrics.lyrics
       return lyrics
     except:
@@ -336,29 +371,6 @@ class Song:
     # Rename new
     os.rename(f"{directory}{newSongFileName}", self.fileDirectory)
 
-
-APP_TITLE: str = "Slifer"
-BLACK: str = "#191414"
-GREEN: str = "#1DB954"
-DOWNLOAD_OPTIONS = ["Song", "Album",  "Artist", "Playlist"]
-
-
-root = tk.Tk()
-root.title(APP_TITLE)
-root.geometry("1920x1080")
-root.configure(bg=GREEN)
-
-MAIN_MENU_FONT = font.Font(family='Broadway', size=100, underline=1)
-SUBTITLE_FONT = font.Font(family='Broadway', size=25)
-STATUS_FONT = font.Font(family='Broadway', size=70)
-LARGE_BUTTON_FONT = font.Font(family='Broadway', size=50)
-
-DOWNLOAD_IMAGE = PhotoImage(file = "buttons/Download-Button.png")
-SETTINGS_IMAGE = PhotoImage(file = "buttons/Settings-Button.png")
-RETURN_IMAGE = PhotoImage(file = "buttons/Return-Button.png")
-CHOOSE_DIRECTORY_IMAGE = PhotoImage(file = "buttons/ChooseDirectory-Button.png")
-DOWNLOAD_SQUARED_IMAGE = PhotoImage(file = "buttons/DownloadSquared-Button.png")
-
 def main_page() -> None:
     global root
 
@@ -387,7 +399,7 @@ def main_page() -> None:
         bg = "#63666A",
         fg = "black",
         command = main_to_download,
-        image=DOWNLOAD_IMAGE
+        # image=DOWNLOAD_IMAGE
     )
 
     global track_replacement_page_button
@@ -408,7 +420,7 @@ def main_page() -> None:
         bg = "#63666A",
         fg = "black",
         command = main_to_settings,
-        image=SETTINGS_IMAGE
+        # image=SETTINGS_IMAGE
     )
 
     global spacer0
@@ -524,7 +536,7 @@ def download_page() -> None:
         text = "Choose Directory",
         font = SUBTITLE_FONT,
         bg = BLACK,
-        image=CHOOSE_DIRECTORY_IMAGE,
+        # image=CHOOSE_DIRECTORY_IMAGE,
         command = lambda: selected_file_directory.set(f"{fd.askdirectory()}/")
     )
     download_directory_button.pack() 
@@ -551,7 +563,7 @@ def download_page() -> None:
         font = SUBTITLE_FONT,
         bg = BLACK,
         # height = 10,
-        image=DOWNLOAD_SQUARED_IMAGE, 
+        # image=DOWNLOAD_SQUARED_IMAGE, 
         # command= lambda: print(selected_download_option.get())
         command = lambda: download_process()
     )
@@ -578,7 +590,7 @@ def download_page() -> None:
         font = SUBTITLE_FONT,
         background = BLACK,
         # width = 19,
-        image=RETURN_IMAGE,
+        # image=RETURN_IMAGE,
         # height=60,
         command = lambda: download_to_main()
     )
@@ -673,7 +685,7 @@ def track_replacement_page() -> None:
       text = "Choose Track",
       font = SUBTITLE_FONT,
       bg = BLACK,
-      image=CHOOSE_DIRECTORY_IMAGE,
+      # image=CHOOSE_DIRECTORY_IMAGE,
       command = lambda: selected_replacement_track.set(f"{fd.askopenfilename()}")
   )
   track_replacement_directory_button.pack() 
@@ -726,7 +738,7 @@ def track_replacement_page() -> None:
       font = SUBTITLE_FONT,
       background = BLACK,
       # width = 19,
-      image=RETURN_IMAGE,
+      # image=RETURN_IMAGE,
       # height=60,
       command = lambda: track_replacement_to_main()
   )
@@ -802,19 +814,25 @@ def track_replacement_to_main() -> None:
 def download_song(URL: str):
   
   download_status.set("Retrieving Song Data...")
+  root.update()
   newSong: Song = Song(URL=URL)
 
   download_status.set("Downloading Song...")
+  root.update()
   newSong.autoDownload(selected_file_directory.get())
 
   download_status.set("Updating Downloaded File with Saved Data...")
   newSong.saveMetaData()
 
+  download_status.set(f"{newSong.title} by {newSong.artist}\nDownload Complete.")
+
 def download_album(URL: str):
   spotify = spotipy.Spotify(auth_manager=SpotifyOAuth(
     scope=scope,
-    client_id='19d6a0a29a1b47ee801ed0c10493b11d',
-    client_secret='a8203a38ec7b4f9a8b910c29af68f944',
+    client_id=os.getenv('SPOTIPY_CLIENT_ID'),
+      # client_id='19d6a0a29a1b47ee801ed0c10493b11d',
+    client_secret=os.getenv('SPOTIPY_CLIENT_SECRET'),
+      # client_secret='a8203a38ec7b4f9a8b910c29af68f944',
     redirect_uri='http://127.0.0.1:9090',
     open_browser=True
   ))
@@ -825,6 +843,8 @@ def download_album(URL: str):
   album_urls = album_object['tracks']['items']
 
   download_status.set("Downloading Album...")
+  root.update()
+
   index: int = 1
   for url in album_urls:
     download_status.set(f"Downloading Song #{index}...")
@@ -832,12 +852,15 @@ def download_album(URL: str):
     root.update()
     index += 1
   download_status.set("Download Complete!")
+  root.update()
 
 def download_artist(URL: str):
   spotify = spotipy.Spotify(auth_manager=SpotifyOAuth(
     scope=scope,
-    client_id='19d6a0a29a1b47ee801ed0c10493b11d',
-    client_secret='a8203a38ec7b4f9a8b910c29af68f944',
+    client_id=os.getenv('SPOTIPY_CLIENT_ID'),
+      # client_id='19d6a0a29a1b47ee801ed0c10493b11d',
+    client_secret=os.getenv('SPOTIPY_CLIENT_SECRET'),
+      # client_secret='a8203a38ec7b4f9a8b910c29af68f944',
     redirect_uri='http://127.0.0.1:9090',
     open_browser=True
   ))
@@ -845,21 +868,26 @@ def download_artist(URL: str):
 
 
   download_status.set("Downloading Artist\'s Songs...")
+  root.update()
 
   index: int = 1
   for album in artistAlbums:
     download_status.set(f"Downloading Album #{index}...")
+    root.update()
     download_album(album['external_urls']['spotify'])
     root.update()
     index += 1
 
   download_status.set("Download Complete!")
+  root.update()
 
 def download_playlist(URL: str):
   spotify = spotipy.Spotify(auth_manager=SpotifyOAuth(
     scope=scope,
-    client_id='19d6a0a29a1b47ee801ed0c10493b11d',
-    client_secret='a8203a38ec7b4f9a8b910c29af68f944',
+    client_id=os.getenv('SPOTIPY_CLIENT_ID'),
+      # client_id='19d6a0a29a1b47ee801ed0c10493b11d',
+    client_secret=os.getenv('SPOTIPY_CLIENT_SECRET'),
+      # client_secret='a8203a38ec7b4f9a8b910c29af68f944',
     redirect_uri='http://127.0.0.1:9090',
     open_browser=True
   ))
@@ -872,30 +900,31 @@ def download_playlist(URL: str):
     playlistTracks = spotify.next(playlistTracks)
     playlistSongs.extend(playlistTracks['items'])
   download_status.set("Retrieving Playlist Tracks...")
-
   root.update()
+
   index: int = 1
   for song in playlistSongs:
     spotify = spotipy.Spotify(auth_manager=SpotifyOAuth(
       scope=scope,
-      client_id='19d6a0a29a1b47ee801ed0c10493b11d',
-      client_secret='34d4b0b1acef4324a22656c49a98dfe9',
+      client_id=os.getenv('SPOTIPY_CLIENT_ID'),
+        # client_id='19d6a0a29a1b47ee801ed0c10493b11d',
+      client_secret=os.getenv('SPOTIPY_CLIENT_SECRET'),
+        # client_secret='a8203a38ec7b4f9a8b910c29af68f944',
       redirect_uri='http://127.0.0.1:9090',
       open_browser=True
     ))
     root.update()
     download_status.set(f"Downloading Playlist Song #{index}...")
+    root.update()
     download_song(song['track']['external_urls']['spotify'])
     index += 1
   download_status.set("Download Complete!")
+  root.update()
   
 def download_process() -> None:
 
   if ('track' in selected_url.get()):
-    download_status.set("Downloading...")
-    root.update()
     download_song(selected_url.get())
-    download_status.set("Download Complete!")
   
   elif ('album' in selected_url.get()):
     download_status.set("Downloading...")
@@ -917,6 +946,7 @@ def download_process() -> None:
 
   else: 
     download_status.set("Error: Invalid URL")
+    root.update()
 
 def replace_downloaded_song(URL: str, track_location: str):
   downloadedSong: Song = Song(directory=track_location)
@@ -927,9 +957,7 @@ def song_replacement():
   root.update()
   replace_downloaded_song(track_replacement_url_entry.get(), track_replacement_directory_entry.get())
   track_replacement_status.set("Track Replacement Complete!")
+  root.update()
 
 main_page()
 root.mainloop()
-
-# geez = Song(directory="/Users/tumi/Desktop/Ini - Grandeur.m4a")
-# geez.trackReplacement("https://www.youtube.com/watch?v=YVkUvmDQ3HY")
